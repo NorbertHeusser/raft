@@ -12,6 +12,11 @@ int uvIpAddrSplit(const char *address,
                   char *service,
                   size_t service_size);
 
+struct addrinfo;
+
+/* Synchronoues resolve hostname to IP address */
+int uvIpResolveBindAddresses(const char *address, struct addrinfo **ai_result);
+
 /* Split @address into @host and @port and populate @addr accordingly. */
 int uvIpParse(const char *address, struct sockaddr_in *addr);
 

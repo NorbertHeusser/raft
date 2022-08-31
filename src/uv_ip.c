@@ -53,6 +53,32 @@ int uvIpAddrSplit(const char *address,
     return 0;
 }
 
+/* Synchronoues resolve hostname to IP address */
+int uvIpResolveBindAddresses(const char *address, struct addrinfo **ai_result)
+{
+	  static struct addrinfo hints = {
+			.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG | AI_PASSIVE,
+			.ai_family = AF_INET,
+			.ai_socktype = SOCK_STREAM,
+			.ai_protocol = 0};
+    char hostname[NI_MAXHOST];
+    char service[NI_MAXSERV];
+	  int rv;
+
+		rv = uvIpAddrSplit( address, hostname, sizeof(hostname), service, sizeof(service));
+		if (rv != 0) {
+			return rv;
+		}
+
+		rv = getaddrinfo( hostname, service, &hints, ai_result);
+		if (rv != 0) {
+			return RAFT_NOCONNECTION;
+		}
+
+		return 0;
+}
+
+
 int uvIpParse(const char *address, struct sockaddr_in *addr)
 {
     char buf[256];
