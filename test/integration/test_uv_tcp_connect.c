@@ -177,6 +177,16 @@ TEST(tcp_connect, first, setUp, tearDown, 0, NULL)
     return MUNIT_OK;
 }
 
+/* Successfully connect to the peer. */
+TEST(tcp_connect, connectByName, setUp, tearDown, 0, NULL)
+{
+    struct fixture *f = data;
+		char host_adress[256];
+		sprintf(host_adress, "localhost:%d", TCP_SERVER_PORT);
+    CONNECT(2, host_adress);
+    return MUNIT_OK;
+}
+
 /* The peer has shutdown */
 TEST(tcp_connect, refused, setUp, tearDown, 0, NULL)
 {

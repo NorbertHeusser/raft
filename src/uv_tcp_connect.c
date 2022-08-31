@@ -30,6 +30,7 @@ struct uvTcpConnect
     uv_buf_t handshake;                  /* Handshake data */
     struct uv_tcp_s *tcp;                /* TCP connection socket handle */
     struct uv_getaddrinfo_s getaddrinfo; /* DNS resolve request */
+  	const struct addrinfo* ai_current;   /* The current sockaddr to connect to */
     struct uv_connect_s connect;         /* TCP connection request */
     struct uv_write_s write;             /* TCP handshake request */
     int status;                          /* Returned to the request callback */
@@ -121,6 +122,8 @@ static void uvTcpConnectUvWriteCb(struct uv_write_s *write, int status)
     uvTcpConnectFinish(connect);
 }
 
+static void uvTcpAsyncConnect(struct uvTcpConnect *connect);
+
 /* The TCP connection is established. Write the handshake data. */
 static void uvTcpConnectUvConnectCb(struct uv_connect_s *req, int status)
 {
@@ -135,6 +138,11 @@ static void uvTcpConnectUvConnectCb(struct uv_connect_s *req, int status)
 
     if (status != 0) {
         assert(status != UV_ECANCELED); /* t->closing would have been true */
+				connect->ai_current = connect->ai_current->ai_next;
+				if (connect->ai_current){
+					uvTcpAsyncConnect(connect);
+					return;
+				}
         connect->status = RAFT_NOCONNECTION;
         ErrMsgPrintf(t->transport->errmsg, "uv_tcp_connect(): %s",
                      uv_strerror(status));
@@ -155,6 +163,22 @@ err:
     uvTcpConnectAbort(connect);
 }
 
+/* Helper function to connect to the remote node */
+static void uvTcpAsyncConnect(struct uvTcpConnect *connect)
+{
+	int rv = uv_tcp_connect(&connect->connect, connect->tcp,
+													connect->ai_current->ai_addr,
+													uvTcpConnectUvConnectCb);
+	if (rv != 0) {
+		/* UNTESTED: since parsing succeed, this should fail only because of                                                                                                                   
+		 * lack of system resources */
+		ErrMsgPrintf(connect->t->transport->errmsg, "uv_tcp_connect(): %s",
+								 uv_strerror(rv));
+		connect->status = RAFT_NOCONNECTION;
+		uvTcpConnectAbort(connect);
+	}
+}
+
 /* The hostname resolve is finished */
 static void uvGetAddrInfoCb(uv_getaddrinfo_t *req,
                             int status,
@@ -162,7 +186,6 @@ static void uvGetAddrInfoCb(uv_getaddrinfo_t *req,
 {
     struct uvTcpConnect *connect = req->data;
     struct UvTcp *t = connect->t;
-    int rv;
 
     connect->resolving =
         false; /* Indicate we are in the name resolving phase */
@@ -179,30 +202,17 @@ static void uvGetAddrInfoCb(uv_getaddrinfo_t *req,
         ErrMsgPrintf(t->transport->errmsg, "uv_getaddrinfo(): %s",
                      uv_err_name(status));
         connect->status = RAFT_NOCONNECTION;
-        goto err;
+				uvTcpConnectAbort(connect);
+				return;
     }
-    rv = uv_tcp_connect(&connect->connect, connect->tcp,
-                        (const struct sockaddr *)res->ai_addr,
-                        uvTcpConnectUvConnectCb);
-    if (rv != 0) {
-        /* UNTESTED: since parsing succeed, this should fail only because of
-         * lack of system resources */
-        ErrMsgPrintf(t->transport->errmsg, "uv_tcp_connect(): %s",
-                     uv_strerror(rv));
-        connect->status = RAFT_NOCONNECTION;
-        goto err;
-    }
-
-    return;
-
-err:
-    uvTcpConnectAbort(connect);
+		connect->ai_current = res;
+		uvTcpAsyncConnect(connect);
 }
 /* Create a new TCP handle and submit a connection request to the event loop. */
 static int uvTcpConnectStart(struct uvTcpConnect *r, const char *address)
 {
     static struct addrinfo hints = {
-        .ai_flags = AI_V4MAPPED | AI_ADDRCONFIG | AI_NUMERICHOST,
+        .ai_flags = AI_V4MAPPED | AI_ADDRCONFIG,
         .ai_family = AF_INET,
         .ai_socktype = SOCK_STREAM,
         .ai_protocol = 0};
