@@ -56,13 +56,17 @@ TEST(ip, resolveBindLocalhost, setUp, tearDown, 0, NULL)
 		rv = uvIpResolveBindAddresses("localhost:9000", &f->address_infos);
 		munit_assert_int(rv, ==, 0);
 		munit_assert_not_null(f->address_infos);
+		/*
 		munit_assert_null(f->address_infos->ai_next);
-		munit_assert_int(f->address_infos->ai_family, ==, AF_INET);
-		munit_assert_int(f->address_infos->ai_addrlen, ==, sizeof(struct sockaddr_in));
-
-		rp = inet_ntop(AF_INET, &((struct sockaddr_in*)f->address_infos->ai_addr)->sin_addr, address_str, sizeof(address_str));
-		munit_assert_not_null(rp);
-		munit_assert_string_equal(rp, "127.0.0.1");
+		*/
+		for (struct addrinfo *ai = f->address_infos; ai; ai = ai->ai_next) {
+			munit_assert_int(f->address_infos->ai_family, ==, AF_INET);
+			munit_assert_int(f->address_infos->ai_addrlen, ==, sizeof(struct sockaddr_in));
+			
+			rp = inet_ntop(AF_INET, &((struct sockaddr_in*)f->address_infos->ai_addr)->sin_addr, address_str, sizeof(address_str));
+			munit_assert_not_null(rp);
+			munit_assert_string_equal(rp, "127.0.0.1");
+		}
 		
     return 0;
 }
