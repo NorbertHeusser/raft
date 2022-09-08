@@ -191,6 +191,7 @@ test_integration_uv_SOURCES = \
   ${libraft_la_SOURCES} \
   test/integration/main_uv.c \
   test/integration/test_uv_init.c \
+  test/integration/test_uv_ip.c \
   test/integration/test_uv_append.c \
   test/integration/test_uv_bootstrap.c \
   test/integration/test_uv_load.c \
