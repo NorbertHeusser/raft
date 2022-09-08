@@ -265,9 +265,9 @@ TEST(tcp_listen, secondOfTwo, setUp, tearDown, 0, NULL)
 /* Simulate port already in use error by addrinfo response contain the same IP twice */
 TEST(tcp_listen, alreadyBound, setUp, tearDown, 0, NULL)
 {
-    const struct AddrinfoResult results[] = { {"127.0.0.1", 9000}, { "127.0.0.1", 9000} };
+	const struct AddrinfoResult results[] = { {"127.0.0.1", 9000}, { "127.0.0.1", 9000}, { "127.0.0.1", 9000} };
     struct fixture *f = data;
-    AddrinfoInjectSetResponse( 0, 2, results);
+    AddrinfoInjectSetResponse( 0, 3, results);
     LISTEN(RAFT_IOERR);
     return MUNIT_OK;
 }

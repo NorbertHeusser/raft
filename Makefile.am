@@ -116,7 +116,7 @@ test_integration_core_SOURCES = \
   test/integration/test_tick.c \
   test/integration/test_transfer.c
 test_integration_core_CFLAGS = $(AM_CFLAGS) -Wno-conversion
-test_integration_core_LDFLAGS = -no-install
+test_integration_core_LDFLAGS = -no-install -ldl
 test_integration_core_LDADD = libtest.la libraft.la
 
 test_fuzzy_core_SOURCES = \
@@ -204,8 +204,8 @@ test_integration_uv_SOURCES = \
   test/integration/test_uv_truncate.c \
   test/integration/test_uv_work.c
 test_integration_uv_CFLAGS = $(AM_CFLAGS) -Wno-type-limits -Wno-conversion
-test_integration_uv_LDFLAGS = -no-install $(UV_LIBS)
-test_integration_uv_LDADD = libtest.la
+test_integration_uv_LDFLAGS = -no-install 
+test_integration_uv_LDADD = libtest.la $(UV_LIBS)
 
 AM_CFLAGS += $(UV_CFLAGS)
 
