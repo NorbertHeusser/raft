@@ -253,11 +253,7 @@ static void uvTcpListenCb(struct uv_stream_s *stream, int status)
     struct uvTcpIncoming *incoming;
     int rv;
 
-    if (t->listeners) {
-        assert(IS_IN_ARRAY(stream, t->listeners, t->num_listeners));
-    } else {
-        assert(stream == (struct uv_stream_s *)&t->default_listener);
-    }
+		assert(IS_IN_ARRAY(stream, t->listeners, t->num_listeners));
 
     if (status != 0) {
         rv = RAFT_IOERR;
@@ -382,11 +378,11 @@ int UvTcpListen(struct raft_uv_transport *transport, raft_uv_accept_cb cb)
     if (rv != 0 || !addr_infos) {
         return rv;
     }
-    if (addr_infos->ai_next && !UvIsAddressDuplication(addr_infos)) {
-        rv = UvTcpListenOnMultipleIP(transport, addr_infos);
+    if (addr_infos->ai_next && UvIsAddressDuplication(addr_infos)) {
+        rv = UvTcpListenOnMultipleIP(transport, addr_infos->ai_next);
     } else {
-        rv = UvTcpBindListen(&t->default_listener, addr_infos->ai_addr);
-    }
+        rv = UvTcpListenOnMultipleIP(transport, addr_infos);
+		}
     freeaddrinfo(addr_infos);
     return rv;
 }
@@ -400,11 +396,8 @@ static void uvTcpListenCloseCbListener(struct uv_handle_s *handle)
         assert(t->listeners);
         --t->num_listeners;
     } else {
-        if (t->listeners) {
-            raft_free(t->listeners);
-            t->listeners = NULL;
-        }
-        t->default_listener.data = NULL;
+			raft_free(t->listeners);
+			t->listeners = NULL;
     }
     UvTcpMaybeFireCloseCb(t);
 }
@@ -421,12 +414,12 @@ void UvTcpListenClose(struct UvTcp *t)
         uvTcpIncomingAbort(incoming);
     }
 
-    if (t->listeners) {
-        for (size_t i = 0; i < t->num_listeners; ++i) {
-            uv_close((struct uv_handle_s *)&t->listeners[i],
-                     uvTcpListenCloseCbListener);
-        }
-    }
-    uv_close((struct uv_handle_s *)&t->default_listener,
-             uvTcpListenCloseCbListener);
+		if (t->num_listeners) {
+			  for (size_t i = 0; i < t->num_listeners; ++i) {
+				    uv_close((struct uv_handle_s *)&t->listeners[i],
+										 uvTcpListenCloseCbListener);
+				}
+		} else {
+		    UvTcpMaybeFireCloseCb(t);
+		}
 }
